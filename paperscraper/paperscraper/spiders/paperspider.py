@@ -1,9 +1,5 @@
 import scrapy
-import re
-
-# import pandas as pd
-
-MAX_SIZE = 20
+from paperscraper.items import PaperscraperItem
 
 SUBJECTS_MAP = {
     "cs": "computer science",
@@ -14,6 +10,9 @@ SUBJECTS_MAP = {
     "stat": "statistics",
     "math": "mathematics",
     "physics": "physics",
+    "astro-ph": "astrophysics",
+    "cond-mat": "condensed matter",
+    "nlin": "nonlinear sciences",
 }
 
 
@@ -21,57 +20,43 @@ class PaperSpider(scrapy.Spider):
     name = "paperspider"
     allowed_domains = ["arxiv.org"]
     start_urls = [
-        "https://arxiv.org/search/advanced?advanced=1&terms-0-term=&terms-0-operator=AND&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-filter_by=all_dates&date-year=&date-from_date=&date-to_date=&date-date_type=submitted_date&abstracts=show&size=200&order=announced_date_first"
+        "https://arxiv.org/search/advanced?advanced=&terms-0-operator=AND&terms-0-term=&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-filter_by=all_dates&date-year=&date-from_date=&date-to_date=&abstracts=show&size=200&order=-announced_date_first"
     ]
 
-    current = 0
-    output_file = "../../papers.csv"
-
-    def text_cleaner(self, text):
-        text = re.sub(r"[^a-zA-Z\s]", "", text)
-        return text
-
     def get_domain_from_tag(self, tag):
-        splitted = tag.split(".")
-        if len(splitted) == 2:
-            return SUBJECTS_MAP[splitted[0]]
+        domainTag = tag.split(".")[0]
+        if domainTag in SUBJECTS_MAP:
+            return SUBJECTS_MAP[domainTag]
         return "physics"
 
     def extract_info(self, paper):
-        title = paper.css("p.title::text").get().strip()
-        abstract = paper.css("span.abstract-full::text").get().strip()
-        abstract = self.text_cleaner(abstract)
+        item = PaperscraperItem()
+
+        title = paper.css("p.title::text").get()
+        abstract_el = paper.css("span.abstract-full")
+        abstract = abstract_el.xpath("text()").get()
 
         domain = self.get_domain_from_tag(paper.css("span.tag.is-link::text").get())
-        main_subject = paper.css("span.tag.is-link::attr(data-tooltip)").get().lower()
+        main_subject = paper.css("span.tag.is-link::attr(data-tooltip)").get()
         subjects = paper.css("span.tag.is-grey::attr(data-tooltip)").getall()
-        subjects = [s.lower() for s in subjects]
 
         p_selector = paper.css("p.is-size-7")
-        submitted_date = re.sub(
-            r"[.;]",
-            "",
-            p_selector.xpath(
-                ".//text()[preceding-sibling::span[contains(text(),'Submitted')]]"
-            ).get(),
-        ).strip()
-        announced_date = re.sub(
-            r"[.;]",
-            "",
-            p_selector.xpath(
-                ".//text()[preceding-sibling::span[contains(text(),'originally announced')]]"
-            ).get(),
-        ).strip()
+        submitted_date = p_selector.xpath(
+            ".//text()[preceding-sibling::span[contains(text(),'Submitted')]]"
+        ).get()
+        announced_date = p_selector.xpath(
+            ".//text()[preceding-sibling::span[contains(text(),'originally announced')]]"
+        ).get()
 
-        return {
-            "title": title,
-            "abstract": abstract,
-            "main_subject": main_subject,
-            "domain": domain,
-            "subjects": subjects,
-            "submitted_date": submitted_date,
-            "announced_date": announced_date,
-        }
+        item["title"] = title
+        item["abstract"] = abstract
+        item["main_subject"] = main_subject
+        item["domain"] = domain
+        item["subjects"] = subjects
+        item["submitted_date"] = submitted_date
+        item["announced_date"] = announced_date
+
+        return item
 
     def parse(self, response):
         papers = [
@@ -80,17 +65,9 @@ class PaperSpider(scrapy.Spider):
             if i % 10 == 0
         ]
 
-        self.current += len(papers)
-
-        if self.current > MAX_SIZE:
-            return
-
         for paper in papers:
             yield self.extract_info(paper)
 
         next_page = response.css("a.pagination-next::attr(href)").get()
-
         if next_page is not None:
             yield response.follow(next_page, self.parse)
-
-        pass

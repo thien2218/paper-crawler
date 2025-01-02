@@ -3,10 +3,14 @@
 # See documentation in:
 # https://docs.scrapy.org/en/latest/topics/items.html
 
-import scrapy
+from scrapy.item import Item, Field
 
 
-class PaperscraperItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class PaperscraperItem(Item):
+    title = Field()
+    abstract = Field()
+    main_subject = Field()
+    domain = Field()
+    subjects = Field()
+    submitted_date = Field()
+    announced_date = Field()
