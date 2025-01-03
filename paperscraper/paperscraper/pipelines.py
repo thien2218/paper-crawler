@@ -22,9 +22,9 @@ class PaperscraperPipeline:
                 adapter[field_name] = value.strip()
 
         # Remove redundant characters and spaces from the abstract
-        abstract = only_alpha.sub(" ", adapter.get("abstract"))
+        abstract = only_alpha.sub("", adapter.get("abstract"))
         adapter["abstract"] = re.sub(r"\s+", " ", abstract)
-        title = only_alpha.sub(" ", adapter.get("title"))
+        title = only_alpha.sub("", adapter.get("title"))
         adapter["title"] = re.sub(r"\s+", " ", title)
 
         # Convert all subjects to lowercase
