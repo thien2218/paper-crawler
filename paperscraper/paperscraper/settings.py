@@ -90,3 +90,12 @@ ITEM_PIPELINES = {
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {
+        "scrapy.core.scraper": {
+            "level": "WARNING",  # Suppress item logs (set to WARNING or higher)
+        },
+    },
+}
